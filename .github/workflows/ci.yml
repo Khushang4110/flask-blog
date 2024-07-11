@@ -6,6 +6,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    services:
+      docker:
+        image: your-docker-image:latest
+        options: --health-cmd "curl --fail http://localhost:5000 || exit 1" --health-interval=10s --health-timeout=5s --health-retries=3
+        ports:
+          - 5000:5000
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -20,6 +27,19 @@ jobs:
         python -m venv venv
         source venv/bin/activate
         pip install -r requirements.txt
+
+    - name: Verify installation
+      run: |
+        source venv/bin/activate
+        pip list
+
+    - name: Wait for the web service to be healthy
+      run: |
+        until curl --output /dev/null --silent --head --fail http://localhost:5000; do
+          echo "Waiting for the web service..."
+          sleep 5
+        done
+      timeout-minutes: 1
 
     - name: Run tests
       run: |
